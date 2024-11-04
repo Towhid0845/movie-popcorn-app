@@ -138,6 +138,8 @@ body {
 .list {
   list-style: none;
   padding: 0.8rem 0;
+  background-color: var(--color-background-500);
+  border-radius: 0.9rem;
   /* overflow: scroll; */
 }
 

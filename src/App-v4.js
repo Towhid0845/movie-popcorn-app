@@ -14,7 +14,7 @@ export default function App() {
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const query = "dfgfgdf";
+  const query = "sfgf";
 
   // don't fetch in render logic because it is a side effect. It will request again & again and it is against render logic rules.
   // fetch(`http://www.omdbapi.com/?apikey=${KEY}&S=tenet`).then(res => res.json()).then(data => setMovies(data.Search));
@@ -54,10 +54,10 @@ export default function App() {
           throw new Error("Something Went Wrong with Fetching Movies");
 
         const data = await res.json();
-        if (data.response === "false") throw new Error("Movie not found");
+        if (data.Response === 'False') throw new Error("Movie not found");
 
         setMovies(data.Search);
-        // console.log(data.Search);
+        console.log(data);
       } catch (err) {
         console.error(err.message);
         setError(err.message);
@@ -79,6 +79,8 @@ export default function App() {
       <Main>
         <Box>
           {/* {isLoading ? <Loader /> : <MovieList movies={movies} />} */}
+
+          {/* This three condition is mutually exclusive (one of them wil be true at a time) */}
           {isLoading && <Loader />}
           {!isLoading && !error && <MovieList movies={movies} />}
           {error && <ErrorMessage message={error} />}
@@ -92,7 +94,7 @@ export default function App() {
   );
 }
 
-function ErrorMessage(message) {
+function ErrorMessage({message}) {
   return (
     <p className="error">
       <span>⛔</span>
