@@ -1,5 +1,5 @@
 // version note 🔥
-// fetch api, error handling
+// fetch api, error handling, useEffect explain, searching movie
 
 import React, { useEffect, useState } from "react";
 
@@ -14,39 +14,33 @@ export default function App() {
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const query = "sfgf"; //change the movie name here to see the list.
+  const [query, setQuery] = useState("");
+
 /*
-  // don't fetch in render logic because it is a side effect. It will request again & again and it is against render logic rules.
-  fetch(`http://www.omdbapi.com/?apikey=${KEY}&S=tenet`).then(res => res.json()).then(data => setMovies(data.Search));
-  setWatched([]); // it will show too many render error because of the fetch api, so don't do this.
-
-  // side effect can only be written within useEffect.
   useEffect(function () {
-    fetch(`http://www.omdbapi.com/?apikey=${KEY}&S=tenet`)
-      .then((res) => res.json())
-      .then((data) => setMovies(data.Search));
-  }, []);
+    console.log("After initial Render");
+  }, []); // It will execute after initial render because empty dependency
 
-  // using async function
   useEffect(function () {
-    async function fetchMovies() {
-      setIsLoading(true);
-      const res = await fetch(`http://www.omdbapi.com/?apikey=${KEY}&S=${query}`);
-      const data = await res.json();
-      setMovies(data.Search);
-      // console.log(data.Search);
+    console.log("After every Render");
+  }); // It will execute after every render because there is no dependency array
 
-      setIsLoading(false);
-    }
-    fetchMovies();
-    }, []);
+  useEffect(
+    function () {
+      console.log("D");
+    },
+    [query]
+  );  // it will execute onChange of search query
+
+  console.log("During Render"); //It will execute first
 */
-  
+
   // error handling with try catch while fetching movies
   useEffect(function () {
     async function fetchMovies() {
       try {
         setIsLoading(true);
+        setError("");
         const res = await fetch(
           `http://www.omdbapi.com/?apikey=${KEY}&S=${query}`
         );
@@ -55,10 +49,10 @@ export default function App() {
           throw new Error("Something Went Wrong with Fetching Movies");
 
         const data = await res.json();
-        if (data.Response === 'False') throw new Error("Movie not found");
+        if (data.Response === "False") throw new Error("Movie not found");
 
         setMovies(data.Search);
-        console.log(data);
+        // console.log(data);
       } catch (err) {
         console.error(err.message);
         setError(err.message);
@@ -66,13 +60,20 @@ export default function App() {
         setIsLoading(false);
       }
     }
+
+    if (query.length < 3) {
+      setMovies([]);
+      setError("");
+      return;
+    }
+
     fetchMovies();
-  }, []);
+  }, [query]);
 
   return (
     <>
       <Navbar>
-        <Search />
+        <Search query={query} setQuery={setQuery} />
         <p className="num-results">
           Found <strong>{movies.length}</strong> results
         </p>
@@ -121,8 +122,7 @@ function Navbar({ children }) {
   );
 }
 
-function Search() {
-  const [query, setQuery] = useState("");
+function Search({query, setQuery}) {
   return (
     <>
       <input

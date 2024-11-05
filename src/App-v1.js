@@ -1,5 +1,5 @@
 // version note 🔥
-// using component and props drilling
+// component and props drilling
 
 import React, { useState } from "react";
 

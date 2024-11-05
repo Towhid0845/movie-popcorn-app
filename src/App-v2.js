@@ -1,6 +1,5 @@
 // version note 🔥
-// using component composition
-// using children props
+// component composition, children props
 
 import React, { useState } from "react";
 

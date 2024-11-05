@@ -1,6 +1,5 @@
 // version note 🔥
-// using component composition
-// using element
+// using component composition, using element
 
 import React, { useState } from "react";
 
