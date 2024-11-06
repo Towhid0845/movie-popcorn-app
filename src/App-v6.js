@@ -1,5 +1,5 @@
 // version note 🔥
-// fetch api, error handling, useEffect query synchronization explain, searching movie
+// fetch api, error handling, selecting movie and fetching movie details
 
 import React, { useEffect, useState } from "react";
 
@@ -8,32 +8,22 @@ const average = (arr) =>
 
 const KEY = "cd57f2fd";
 
-// using component composition and props drilling
 export default function App() {
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
 
-/*
-  useEffect(function () {
-    console.log("After initial Render");
-  }, []); // It will execute after initial render because empty dependency
+  function handleSelectMovie(id) {
+    // setSelectedId(id);
+    setSelectedId((selectedId)=>(id===selectedId ? null : id)); // on second click hide the detail
+  }
 
-  useEffect(function () {
-    console.log("After every Render");
-  }); // It will execute after every render because there is no dependency array
-
-  useEffect(
-    function () {
-      console.log("D");
-    },
-    [query]
-  );  // it will execute onChange of search query
-
-  console.log("During Render"); //It will execute first
-*/
+  function handleCloseMovie() {
+    setSelectedId(null);
+  }
 
   // error handling with try catch while fetching movies
   useEffect(function () {
@@ -52,7 +42,7 @@ export default function App() {
         if (data.Response === "False") throw new Error("Movie not found");
 
         setMovies(data.Search);
-        // console.log(data);
+        // console.log(data.Search);
       } catch (err) {
         console.error(err.message);
         setError(err.message);
@@ -80,16 +70,25 @@ export default function App() {
       </Navbar>
       <Main>
         <Box>
-          {/* {isLoading ? <Loader /> : <MovieList movies={movies} />} */}
-
           {/* This three condition is mutually exclusive (one of them wil be true at a time) */}
           {isLoading && <Loader />}
-          {!isLoading && !error && <MovieList movies={movies} />}
+          {!isLoading && !error && (
+            <MovieList movies={movies} onSelectMovie={handleSelectMovie} />
+          )}
           {error && <ErrorMessage message={error} />}
         </Box>
         <Box>
-          <WatchedSummary watched={watched} />
-          <WatchedList watched={watched} />
+          {selectedId ? (
+            <MovieDetails
+              selectedId={selectedId}
+              onCloseMovie={handleCloseMovie}
+            />
+          ) : (
+            <>
+              <WatchedSummary watched={watched} />
+              <WatchedList watched={watched} />
+            </>
+          )}
         </Box>
       </Main>
     </>
@@ -153,19 +152,20 @@ function Box({ children }) {
   );
 }
 
-function MovieList({ movies }) {
+function MovieList({ movies, onSelectMovie }) {
   return (
-    <ul className="list">
+    <ul className="list list-movies">
       {movies?.map((movie) => (
-        <Movie movie={movie} key={movie.imdbID} />
+        <Movie movie={movie} onSelectMovie={onSelectMovie} key={movie.imdbID} />
       ))}
     </ul>
   );
 }
 
-function Movie({ movie }) {
+function Movie({ movie, onSelectMovie }) {
   return (
-    <li key={movie.imdbID}>
+    // <li key={movie.imdbID} onClick={onSelectMovie}>
+    <li onClick={() => onSelectMovie(movie.imdbID)}>
       <img src={movie.Poster} alt={`${movie.Title} poster`} />
       <h3>{movie.Title}</h3>
       <div>
@@ -178,6 +178,13 @@ function Movie({ movie }) {
   );
 }
 // end of list box
+
+function MovieDetails({ selectedId, onCloseMovie }) {
+  return <div className="details">
+    <button className="btn-back" onClick={onCloseMovie}>&larr;</button>
+    {selectedId}</div>;
+}
+
 
 function WatchedSummary({ watched }) {
   const avgImdbRating = average(watched.map((movie) => movie.imdbRating));
