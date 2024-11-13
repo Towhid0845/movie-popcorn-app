@@ -1,5 +1,7 @@
 // version note 🔥
 // fetch api, error handling, selecting movie and fetching movie details, make watch list
+// Cleanup function: dynamic page title change with movie select and cleanUp movie title.  
+// Clearing Up data fetching
 
 import React, { useEffect, useState } from "react";
 import StarRating from "./StarRating";
@@ -37,12 +39,13 @@ export default function App() {
   // error handling with try catch while fetching movies
   useEffect(
     function () {
+      const controller = new AbortController(); // this is a browser api for abort fetching
       async function fetchMovies() {
         try {
           setIsLoading(true);
           setError("");
           const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${KEY}&S=${query}`
+            `http://www.omdbapi.com/?apikey=${KEY}&S=${query}`, {signal: controller.signal}
           );
 
           if (!res.ok)
@@ -52,10 +55,13 @@ export default function App() {
           if (data.Response === "False") throw new Error("Movie not found");
 
           setMovies(data.Search);
+          setError("");
           // console.log(data.Search);
         } catch (err) {
           console.error(err.message);
-          setError(err.message);
+          if (err.name !== 'AbortError') { 
+            setError(err.message);
+          }
         } finally {
           setIsLoading(false);
         }
@@ -68,6 +74,11 @@ export default function App() {
       }
 
       fetchMovies();
+
+      // cleanUp function for fetch data
+      return function () {
+        controller.abort();
+      }
     },
     [query]
   );
@@ -199,12 +210,13 @@ function Movie({ movie, onSelectMovie }) {
 function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
   const [movie, setMovie] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [userRating, setUserRating] = useState('');
+  const [userRating, setUserRating] = useState("");
   const isWatched = watched.map((movie) => movie.imdbID).includes(selectedId);
   // console.log(isWatched);
 
-  const watchedUserRating = watched.find((movie) => movie.imdbID === selectedId)?.userRating;
-
+  const watchedUserRating = watched.find(
+    (movie) => movie.imdbID === selectedId
+  )?.userRating;
 
   const {
     Actor: actor,
@@ -267,6 +279,24 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     [selectedId]
   );
 
+  // it will change page title dynamically
+  useEffect(
+    function () {
+      if (!title) return; // it wil fix the undefined issue
+      document.title = `Movie | ${title}`;
+
+      // this is cleanUp function
+      return function () {
+        document.title = 'usePopcorn';
+
+        // how can it still remember the title, because it run after unmount the component
+        console.log(`cleanUp effect for movie title ${title}`);
+        // It is possible because of Closure in JS. Closure remembers all the variable of a function when it was created. That's why cleanUp function can still access the title variable
+       };
+    },
+    [title]
+  );
+
   return (
     <div className="details">
       {isLoading ? (
@@ -306,7 +336,10 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
                   )}
                 </>
               ) : (
-                <p>You already rated this movie with {watchedUserRating} <span>⭐</span></p>
+                <p>
+                  You already rated this movie with {watchedUserRating}{" "}
+                  <span>⭐</span>
+                </p>
               )}
             </div>
             <p>
