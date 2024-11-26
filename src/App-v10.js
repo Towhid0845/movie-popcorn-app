@@ -1,6 +1,5 @@
 // version note 🔥
-// fetch api, error handling, selecting movie 
-// fetching movie details
+// breaking the hooks linked list rules or hook rules at line 250
 
 import React, { useEffect, useState } from "react";
 import StarRating from "./StarRating";
@@ -27,15 +26,24 @@ export default function App() {
     setSelectedId(null);
   }
 
+  function handleAddWatched(movie) {
+    setWatched((watched) => [...watched, movie]);
+  }
+
+  function handleDeleteWatched(id) {
+    setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
+  }
+
   // error handling with try catch while fetching movies
   useEffect(
     function () {
+      const controller = new AbortController(); // this is a browser api for abort fetching
       async function fetchMovies() {
         try {
           setIsLoading(true);
           setError("");
           const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${KEY}&S=${query}`
+            `https://www.omdbapi.com/?apikey=${KEY}&S=${query}`, {signal: controller.signal}
           );
 
           if (!res.ok)
@@ -45,10 +53,14 @@ export default function App() {
           if (data.Response === "False") throw new Error("Movie not found");
 
           setMovies(data.Search);
+          setError("");
           // console.log(data.Search);
         } catch (err) {
-          console.error(err.message);
-          setError(err.message);
+          // console.error(err.message);
+          if (err.name !== 'AbortError') { 
+            // console.log(err.message);
+            setError(err.message);
+          }
         } finally {
           setIsLoading(false);
         }
@@ -60,7 +72,13 @@ export default function App() {
         return;
       }
 
+      handleCloseMovie(); // when search a new movie, previous one should be closed.
       fetchMovies();
+
+      // cleanUp function for fetch data
+      return function () {
+        controller.abort();
+      }
     },
     [query]
   );
@@ -87,11 +105,16 @@ export default function App() {
             <MovieDetails
               selectedId={selectedId}
               onCloseMovie={handleCloseMovie}
+              onAddWatched={handleAddWatched}
+              watched={watched}
             />
           ) : (
             <>
               <WatchedSummary watched={watched} />
-              <WatchedList watched={watched} />
+              <WatchedList
+                watched={watched}
+                onDeleteWatched={handleDeleteWatched}
+              />
             </>
           )}
         </Box>
@@ -184,55 +207,123 @@ function Movie({ movie, onSelectMovie }) {
 }
 // end of list box
 
-function MovieDetails({ selectedId, onCloseMovie }) {
+function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
   const [movie, setMovie] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [userRating, setUserRating] = useState("");
+  const isWatched = watched.map((movie) => movie.imdbID).includes(selectedId);
+  // console.log(isWatched);
+
+  const watchedUserRating = watched.find(
+    (movie) => movie.imdbID === selectedId
+  )?.userRating;
 
   const {
     Actor: actor,
-    Award: award,
-    BoxOffice: boxOffice,
-    Country: country,
-    DVD,
+    // Award: award,
+    // BoxOffice: boxOffice,
+    // Country: country,
+    // DVD,
     Director: director,
     Genre: genre,
-    Language: language,
-    Metascore: metascore,
+    // Language: language,
+    // Metascore: metascore,
     Plot: plot,
     Poster: poster,
-    Production: production,
-    Rated: rated,
-    Rating: rating,
+    // Production: production,
+    // Rated: rated,
+    // Rating: rating,
     Released: released,
-    Response: response,
+    // Response: response,
     Runtime: runtime,
     Title: title,
-    Type: type,
-    Website: website,
-    Writer: writer,
+    // Type: type,
+    // Website: website,
+    // Writer: writer,
     Year: year,
-    imdbID,
+    // imdbID,
     imdbRating,
-    imdbVotes,
+    // imdbVotes,
   } = movie;
 
-  console.log(title, imdbRating);
+  // breaking the hook rules
+  // remove eslint-disable after the experiment otherwise, it will create problems
+  /* eslint-disable*/
+  // if (imdbRating > 8) [isTop, setIsTop] = useState(true);
+
+  // return before all the hook executed
+  // if(imdbRating > 8) return <p>Greatest Ever!!!</p>
+
+  // console.log(title, imdbRating);
+  function handleAdd() {
+    const newWatchedMovie = {
+      imdbID: selectedId,
+      title,
+      year,
+      poster,
+      imdbRating: Number(imdbRating),
+      runtime: Number(runtime.split("").at(0)),
+      userRating,
+    };
+    onAddWatched(newWatchedMovie);
+    onCloseMovie();
+  }
+
+  // side effect for escape key event
+  // press the escape key to see the effect
+  useEffect(
+    function () {
+      function callback(e) {
+        // console.log(e);
+        if (e.code === "Escape") {
+          onCloseMovie();
+          // console.log("closed...");
+        }
+      }
+      document.addEventListener("keydown", callback);
+
+      // cleanUp
+      return function () {
+        document.removeEventListener("keydown", callback);
+      };
+    },
+    [onCloseMovie]
+  );
+
   useEffect(
     function () {
       async function getMovieDetails() {
         setIsLoading(true);
         const res = await fetch(
-          `http://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`
+          `https://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`
         );
 
         const data = await res.json();
-        console.log(data);
+        // console.log(data);
         setMovie(data);
         setIsLoading(false);
       }
       getMovieDetails();
     },
     [selectedId]
+  );
+
+  // it will change page title dynamically
+  useEffect(
+    function () {
+      if (!title) return; // it wil fix the undefined issue
+      document.title = `Movie | ${title}`;
+
+      // this is cleanUp function
+      return function () {
+        document.title = "usePopcorn";
+
+        // how can it still remember the title, because it run after unmount the component
+        // console.log(`cleanUp effect for movie title ${title}`);
+        // It is possible because of Closure in JS. Closure remembers all the variable of a function when it was created. That's why cleanUp function can still access the title variable
+      };
+    },
+    [title]
   );
 
   return (
@@ -246,7 +337,7 @@ function MovieDetails({ selectedId, onCloseMovie }) {
               &larr;
             </button>
             <img src={poster} alt={`poster of ${movie} movie`} />
-            <div class="details-overview">
+            <div className="details-overview">
               <h2>{title}</h2>
               <p>
                 {released} &bull; {runtime}
@@ -259,8 +350,26 @@ function MovieDetails({ selectedId, onCloseMovie }) {
             </div>
           </header>
           <section>
-            <div class="rating">
-              <StarRating maxRating={10} size={24} />
+            <div className="rating">
+              {!isWatched ? (
+                <>
+                  <StarRating
+                    maxRating={10}
+                    size={24}
+                    onSetRating={setUserRating}
+                  />
+                  {userRating > 0 && (
+                    <button className="btn-add" onClick={handleAdd}>
+                      + Add to Watched List
+                    </button>
+                  )}
+                </>
+              ) : (
+                <p>
+                  You already rated this movie with {watchedUserRating}{" "}
+                  <span>⭐</span>
+                </p>
+              )}
             </div>
             <p>
               <em>{plot}</em>
@@ -275,6 +384,7 @@ function MovieDetails({ selectedId, onCloseMovie }) {
 }
 
 function WatchedSummary({ watched }) {
+  // console.log(watched);
   const avgImdbRating = average(watched.map((movie) => movie.imdbRating));
   const avgUserRating = average(watched.map((movie) => movie.userRating));
   const avgRuntime = average(watched.map((movie) => movie.runtime));
@@ -288,11 +398,11 @@ function WatchedSummary({ watched }) {
         </p>
         <p>
           <span>⭐️</span>
-          <span>{avgImdbRating}</span>
+          <span>{avgImdbRating.toFixed(2)}</span>
         </p>
         <p>
           <span>🌟</span>
-          <span>{avgUserRating}</span>
+          <span>{avgUserRating.toFixed(2)}</span>
         </p>
         <p>
           <span>⏳</span>
@@ -303,21 +413,25 @@ function WatchedSummary({ watched }) {
   );
 }
 
-function WatchedList({ watched }) {
+function WatchedList({ watched, onDeleteWatched }) {
   return (
     <ul className="list">
       {watched.map((movie) => (
-        <WatchedMovie movie={movie} key={movie.imdbID} />
+        <WatchedMovie
+          movie={movie}
+          onDeleteWatched={onDeleteWatched}
+          key={movie.imdbID}
+        />
       ))}
     </ul>
   );
 }
 
-function WatchedMovie({ movie }) {
+function WatchedMovie({ movie, onDeleteWatched }) {
   return (
     <li key={movie.imdbID}>
-      <img src={movie.Poster} alt={`${movie.Title} poster`} />
-      <h3>{movie.Title}</h3>
+      <img src={movie.poster} alt={`${movie.title} poster`} />
+      <h3>{movie.title}</h3>
       <div>
         <p>
           <span>⭐️</span>
@@ -331,6 +445,7 @@ function WatchedMovie({ movie }) {
           <span>⏳</span>
           <span>{movie.runtime} min</span>
         </p>
+        <div className="btn-delete" onClick={()=> onDeleteWatched(movie.imdbID)}>X</div>
       </div>
     </li>
   );

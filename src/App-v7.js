@@ -1,5 +1,6 @@
 // version note 🔥
-// fetch api, error handling, selecting movie and fetching movie details, make watch list
+// fetch api, error handling, selecting movie and fetching movie details
+// make watch list
 
 import React, { useEffect, useState } from "react";
 import StarRating from "./StarRating";

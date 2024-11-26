@@ -1,5 +1,6 @@
 // version note 🔥
-// fetch api, error handling, useEffect query synchronization explain, searching movie
+// fetch api, error handling
+// useEffect query synchronization explain, searching movie
 
 import React, { useEffect, useState } from "react";
 
