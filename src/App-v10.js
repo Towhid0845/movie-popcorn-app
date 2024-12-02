@@ -1,5 +1,6 @@
 // version note 🔥
 // breaking the hooks linked list rules or hook rules at line 250
+// updating useSate is a asynchronous at line 291
 
 import React, { useEffect, useState } from "react";
 import StarRating from "./StarRating";
@@ -43,7 +44,8 @@ export default function App() {
           setIsLoading(true);
           setError("");
           const res = await fetch(
-            `https://www.omdbapi.com/?apikey=${KEY}&S=${query}`, {signal: controller.signal}
+            `https://www.omdbapi.com/?apikey=${KEY}&S=${query}`,
+            { signal: controller.signal }
           );
 
           if (!res.ok)
@@ -57,7 +59,7 @@ export default function App() {
           // console.log(data.Search);
         } catch (err) {
           // console.error(err.message);
-          if (err.name !== 'AbortError') { 
+          if (err.name !== "AbortError") {
             // console.log(err.message);
             setError(err.message);
           }
@@ -78,7 +80,7 @@ export default function App() {
       // cleanUp function for fetch data
       return function () {
         controller.abort();
-      }
+      };
     },
     [query]
   );
@@ -247,14 +249,32 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
   } = movie;
 
   // breaking the hook rules
-  // remove eslint-disable after the experiment otherwise, it will create problems
+  // 1️⃣ remove eslint-disable after the experiment otherwise, it will create problems
   /* eslint-disable*/
   // if (imdbRating > 8) [isTop, setIsTop] = useState(true);
 
-  // return before all the hook executed
+  // 2️⃣ return before all the hook executed
   // if(imdbRating > 8) return <p>Greatest Ever!!!</p>
 
   // console.log(title, imdbRating);
+
+  // // 3️⃣ it will not work because there is no render to set initial state value
+  // const [isTop, setIsTop] = useState(imdbRating > 8);
+  // console.log(isTop);
+
+  // // now, it will work fine
+  // useEffect(
+  //   function () {
+  //     setIsTop(imdbRating > 8)
+  //   }
+  // )
+
+  // This works exactly same
+  const isTop = imdbRating > 8;
+  console.log(isTop);
+
+  const [avgRating, setAvgRating] = useState(0);
+
   function handleAdd() {
     const newWatchedMovie = {
       imdbID: selectedId,
@@ -267,6 +287,15 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     };
     onAddWatched(newWatchedMovie);
     onCloseMovie();
+
+    // 4️⃣ how to fix useState asynchronous behavior
+
+    // setAvgRating(Number(imdbRating));
+    // // alert(avgRating);
+    // // setAvgRating((avgRating + userRating) / 2); // it will not update the state because of asynchronous
+
+    // // use a callback function to update the instantly
+    // setAvgRating((anyThing) => (anyThing + userRating) / 2);
   }
 
   // side effect for escape key event
@@ -347,6 +376,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
                 <span>⭐</span>
                 {imdbRating} IMDb rating
               </p>
+              <p>Average Rating: {avgRating}</p>
             </div>
           </header>
           <section>
@@ -366,7 +396,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
                 </>
               ) : (
                 <p>
-                  You already rated this movie with {watchedUserRating}{" "}
+                  You rated this movie with {watchedUserRating}{" "}
                   <span>⭐</span>
                 </p>
               )}
@@ -445,7 +475,12 @@ function WatchedMovie({ movie, onDeleteWatched }) {
           <span>⏳</span>
           <span>{movie.runtime} min</span>
         </p>
-        <div className="btn-delete" onClick={()=> onDeleteWatched(movie.imdbID)}>X</div>
+        <div
+          className="btn-delete"
+          onClick={() => onDeleteWatched(movie.imdbID)}
+        >
+          X
+        </div>
       </div>
     </li>
   );
