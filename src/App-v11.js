@@ -1,6 +1,8 @@
 // version note 🔥
 // breaking the hooks linked list rules or hook rules at line 250
 // updating useSate is a asynchronous at line 291
+// save watchlist to localstorage
+// read watchlist from localstorage
 
 import React, { useEffect, useState } from "react";
 import StarRating from "./StarRating";
@@ -12,11 +14,15 @@ const KEY = "cd57f2fd";
 
 export default function App() {
   const [movies, setMovies] = useState([]);
-  const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
+  // const [watched, setWatched] = useState([]);
+  const [watched, setWatched] = useState(function () {
+    const storedValue = localStorage.getItem("watched");
+    return storedValue;
+  });
 
   function handleSelectMovie(id) {
     // setSelectedId(id);
@@ -29,11 +35,20 @@ export default function App() {
 
   function handleAddWatched(movie) {
     setWatched((watched) => [...watched, movie]);
+
+    // we should add this portion in a useEffect.
+    // localStorage.setItem("watched", watched); // it will not add last movie because of asynchronous.
+    localStorage.setItem("watched", JSON.stringify([...watched, movie])); // localstorage always save data as a key:value pair and value must be a string.
   }
+
+  useEffect(function () {
+    localStorage.setItem("watched", JSON.stringify(watched)); // no need spread operator(...) because it will run after the movie(state) updated
+  },[watched])
 
   function handleDeleteWatched(id) {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
+
 
   // error handling with try catch while fetching movies
   useEffect(
